@@ -17,45 +17,64 @@ def main(stdscr: curses.window):
         | curses.BUTTON3_RELEASED
     )
     # seed(0)
-
-    game = Game(WIDTH, HEIGHT, MINES)
-
-    stdscr.clear()
     # stdscr.nodelay(True)
     curses.mouseinterval(0)
 
-    left_down = False
-    right_down = False
-
-    display_board(stdscr, game)
-    stdscr.refresh()
-
     while True:
-        key = stdscr.getch()
-        if key == curses.KEY_MOUSE:
-            _, x, y, _, bstate = curses.getmouse()
-            if x in range(0, WIDTH) and y in range(0, HEIGHT):
-                if bstate & curses.BUTTON1_PRESSED:
-                    left_down = True
-                if bstate & curses.BUTTON3_PRESSED:
-                    right_down = True
+        stdscr.clear()
+        game = Game(WIDTH, HEIGHT, MINES)
 
-                if left_down and right_down:
-                    if not game.reveal_around(x, y):
-                        break
-
-                if bstate & curses.BUTTON1_RELEASED:
-                    left_down = False
-                    if not game.reveal(x, y):
-                        break
-                if bstate & curses.BUTTON3_RELEASED:
-                    right_down = False
-                    game.flag(x, y)
-        if key == 27:
-            break
+        left_down = False
+        right_down = False
 
         display_board(stdscr, game)
         stdscr.refresh()
+
+        while True:
+            if game.win():
+                display_full_board(stdscr, game)
+                stdscr.refresh()
+                stdscr.addstr(HEIGHT, 0, "You won!")
+                break
+
+            key = stdscr.getch()
+            if key == curses.KEY_MOUSE:
+                _, x, y, _, bstate = curses.getmouse()
+                if x in range(0, WIDTH) and y in range(0, HEIGHT):
+                    if bstate & curses.BUTTON1_PRESSED:
+                        left_down = True
+                        if not game.reveal(x, y):
+                            break
+                    if bstate & curses.BUTTON3_PRESSED:
+                        right_down = True
+                        game.flag(x, y)
+
+                    if left_down and right_down:
+                        if not game.reveal_around(x, y):
+                            break
+
+                    if bstate & curses.BUTTON1_RELEASED:
+                        left_down = False
+
+                    if bstate & curses.BUTTON3_RELEASED:
+                        right_down = False
+
+            if key == 27:
+                exit()
+
+            display_board(stdscr, game)
+            stdscr.refresh()
+        display_full_board(stdscr, game)
+        stdscr.addstr(HEIGHT, 0, "Boom!")
+        stdscr.refresh()
+        while True:
+            key = stdscr.getch()
+            if key == curses.KEY_MOUSE:
+                _, _, _, _, bstate = curses.getmouse()
+                if bstate & curses.BUTTON1_PRESSED:
+                    break
+                if bstate & curses.BUTTON3_PRESSED:
+                    break
 
 
 def display_board(stdscr: curses.window, game: Game):
@@ -66,6 +85,22 @@ def display_board(stdscr: curses.window, game: Game):
                 stdscr.addstr(i, j, char, curses.color_pair(11))
                 continue
             if char == ">":
+                stdscr.addstr(i, j, char, curses.color_pair(9))
+                continue
+            if char == "0":
+                stdscr.addstr(i, j, " ", curses.color_pair(10))
+                continue
+            stdscr.addstr(i, j, char, curses.color_pair(int(char)))
+
+
+def display_full_board(stdscr: curses.window, game: Game):
+    for i, row in enumerate(game.board):
+        for j, tile in enumerate(row):
+            char = str(tile)
+            if char == " ":
+                stdscr.addstr(i, j, char, curses.color_pair(11))
+                continue
+            if char == "*":
                 stdscr.addstr(i, j, char, curses.color_pair(9))
                 continue
             if char == "0":
